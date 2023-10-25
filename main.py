@@ -63,7 +63,7 @@ def main():
                     validMoves = gs.getValidMoves()
                     sqSelected = ()
                     playerClicks = []
-                    moveMade = False
+                    movemade = False
             else:
                 pass
 
