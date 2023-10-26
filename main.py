@@ -1,6 +1,7 @@
 #display and get user input
 import pygame as p
 import engine
+import smartMoveFinder
 
 WIDTH = HEIGHT = 512
 DIMENSION = 8
@@ -20,39 +21,44 @@ def main():
     clock = p.time.Clock()
     screen.fill(p.Color("white"))
     gs = engine.GameState()
+    gameOver = False
     loadImages()
     running = True
     sqSelected = ()                             #no square selected, variable to keep track of clicked square
     playerClicks = []                           #keep track of player's clicks, two tuples [(6,4),(4,4)]
     validMoves = gs.getValidMoves()
     movemade = False
+    #player variables set to true if player is human, false if computer
+    playerOne = False
+    playerTwo = False
     
     while running:
+        humanTurn = (gs.whiteToMove and playerOne) or (not gs.whiteToMove and playerTwo)
         for e in p.event.get():
             if e.type == p.QUIT:
                 running = False
             elif e.type == p.MOUSEBUTTONDOWN:
-                location = p.mouse.get_pos()
-                col = location[0]//SQ_SIZE
-                row = location[1]//SQ_SIZE
-                if sqSelected == (row,col):
-                    sqSelected=()
-                    playerClicks = []
-                else:
-                    sqSelected=(row,col)
-                    playerClicks.append(sqSelected)
-
-                if len(playerClicks)==2:        #after 2nd click
-                    move = engine.Move(playerClicks[0], playerClicks[1], gs.board)
-                    for i in range(len(validMoves)):
-                        if move==validMoves[i]:
-                            gs.makeMove(validMoves[i])
-                            movemade=True
+                if not gameOver and humanTurn:
+                    location = p.mouse.get_pos()
+                    col = location[0]//SQ_SIZE
+                    row = location[1]//SQ_SIZE
+                    if sqSelected == (row,col):
+                        sqSelected=()
+                        playerClicks = []
+                    else:
+                        sqSelected=(row,col)
+                        playerClicks.append(sqSelected)
+                    if len(playerClicks)==2:        #after 2nd click
+                        move = engine.Move(playerClicks[0], playerClicks[1], gs.board)
+                        if move in validMoves:
+                            gs.makeMove(move)
+                            movemade= True
                             sqSelected = ()
                             playerClicks = []
-                    if not movemade:
-                        #should fix: if player click an invalid move and it is his color then change, else delete
-                        playerClicks = [sqSelected]
+                            break
+                        if not movemade:
+                            #should fix: if player click an invalid move and it is his color then change, else delete
+                            playerClicks = [sqSelected]
             #key handlers
             elif e.type==p.KEYDOWN:
                 if e.key == p.K_z:              #undo when "z" pressed
@@ -67,9 +73,15 @@ def main():
             else:
                 pass
 
+        if not gameOver and not humanTurn:
+            AIMove = smartMoveFinder.findRandomMove(validMoves)
+            gs.makeMove(AIMove)
+            movemade = True
+
         if movemade:
             validMoves = gs.getValidMoves()
             movemade = False
+            gameOver = gs.stalemate or gs.checkmate
 
         drawGameState(screen,gs,validMoves,sqSelected)
         clock.tick(MAX_FPS)
